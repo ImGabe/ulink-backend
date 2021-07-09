@@ -4,35 +4,39 @@
 extern crate rocket;
 extern crate redis;
 
+mod models;
+
+use rocket::http::{ContentType, Status};
+use rocket::request::Request;
 use rocket::response::Redirect;
+use rocket::response::{self, Responder, Response};
 use rocket::serde::json::Json;
-use rocket::{get, launch, routes};
 
 use nanoid::nanoid;
 use redis::Commands;
-use serde::Deserialize;
-use serde::Serialize;
 use serde_json::Value;
 
-#[derive(Serialize, Deserialize)]
-struct Link {
-    id: String,
-    url: String,
-    duration: usize,
-}
-
-#[derive(Serialize, Deserialize)]
-struct LinkStatus {
-    id: String,
-    url: String,
-    duration: usize,
-}
+use models::{Link, LinkStatus};
 
 fn connect() -> redis::Connection {
     redis::Client::open("redis://127.0.0.1:6379")
         .expect("Invalid connection URL")
         .get_connection()
         .expect("failed to connect to Redis")
+}
+#[derive(Debug)]
+struct ApiResponse {
+    json: Value,
+    status: Status,
+}
+
+impl<'r, 'a> Responder<'r, 'r> for ApiResponse {
+    fn respond_to(self, req: &Request) -> response::Result<'r> {
+        Response::build_from(self.json.respond_to(&req).unwrap())
+            .status(self.status)
+            .header(ContentType::JSON)
+            .ok()
+    }
 }
 
 #[get("/")]
@@ -60,7 +64,7 @@ fn redirect(id: &str) -> Redirect {
 }
 
 #[post("/", format = "json", data = "<link>")]
-fn new(link: Json<Link>) -> Value {
+fn new(link: Json<Link>) -> ApiResponse {
     let id = nanoid!(5);
     let mut conn = connect();
 
@@ -71,16 +75,31 @@ fn new(link: Json<Link>) -> Value {
         .expire(&id, link.duration)
         .expect("faile to execute EXPIRE");
 
-    serde_json::json!(LinkStatus {
-        id: id,
-        url: link.url.clone(),
-        duration: link.duration
-    })
+    ApiResponse {
+        json: serde_json::json!(LinkStatus {
+            id: id,
+            url: link.url.clone(),
+            duration: link.duration
+        }),
+        status: Status::Created,
+    }
 }
 
 #[put("/", format = "json", data = "<link>")]
-fn edit_url(link: Json<Link>) -> Value {
+fn edit_url(link: Json<Link>) -> ApiResponse {
     let mut conn = connect();
+
+    let exist: bool = conn.exists(&link.id).expect("faile to execute EXISTS");
+    if !exist {
+        return ApiResponse {
+            json: serde_json::json!(LinkStatus {
+                id: String::new(),
+                url: String::new(),
+                duration: 0
+            }),
+            status: Status::NotFound,
+        };
+    }
 
     let _: () = conn
         .getset(&link.id, &link.url)
@@ -89,25 +108,43 @@ fn edit_url(link: Json<Link>) -> Value {
         .expire(&link.id, link.duration)
         .expect("faile to execute EXPIRE");
 
-    serde_json::json!(LinkStatus {
-        id: link.id.clone(),
-        url: link.url.clone(),
-        duration: link.duration
-    })
+    ApiResponse {
+        json: serde_json::json!(LinkStatus {
+            id: link.id.clone(),
+            url: link.url.clone(),
+            duration: link.duration
+        }),
+        status: Status::Accepted,
+    }
 }
 
 #[delete("/", format = "json", data = "<link>")]
-fn delete_url(link: Json<Link>) -> Value {
+fn delete_url(link: Json<Link>) -> ApiResponse {
     let mut conn = connect();
+
+    let exist: bool = conn.exists(&link.id).expect("faile to execute EXISTS");
+    if !exist {
+        return ApiResponse {
+            json: serde_json::json!(LinkStatus {
+                id: String::new(),
+                url: String::new(),
+                duration: 0
+            }),
+            status: Status::NotFound,
+        };
+    }
 
     let url: String = conn.get(&link.id).expect("failed to execute SET");
     let _: () = conn.del(&link.id).expect("failed to execute DEL");
 
-    serde_json::json!(LinkStatus {
-        id: link.id.clone(),
-        url: url,
-        duration: link.duration
-    })
+    ApiResponse {
+        json: serde_json::json!(LinkStatus {
+            id: link.id.clone(),
+            url: url,
+            duration: link.duration
+        }),
+        status: Status::Ok,
+    }
 }
 
 #[launch]
