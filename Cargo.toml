@@ -1,0 +1,20 @@
+[package]
+name = "demo-game"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+rand = "*"
+rand_derive = "*"
+serde_json = "*"
+nanoid = "*"
+redis = "*"
+dotenv = "*"
+
+[dependencies.rocket]
+version = "0.5.0-rc.1"
+features = ["json"]
+
+[dependencies.serde]
+version = "*"
+features = ["derive"]
