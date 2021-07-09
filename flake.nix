@@ -1,5 +1,5 @@
 {
-  description = "Ascii-generator flake";
+  description = "ulink";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
@@ -17,7 +17,7 @@
 
   outputs = { self, nixpkgs, utils, rust-overlay, crate2nix, ... }:
     let
-      name = "ascii-generator";
+      name = "ulink";
     in
     utils.lib.eachDefaultSystem
       (system:
