@@ -10,9 +10,9 @@ use rocket::{get, launch, routes};
 
 use nanoid::nanoid;
 use redis::Commands;
-use serde_json::Value;
 use serde::Deserialize;
 use serde::Serialize;
+use serde_json::Value;
 
 #[derive(Serialize, Deserialize)]
 struct Link {
@@ -38,12 +38,12 @@ fn connect() -> redis::Connection {
 #[get("/")]
 fn index() -> Value {
     let mut conn = connect();
-    let ids: Vec<String> = conn.keys("*").unwrap();
+    let ids: Vec<String> = conn.keys("*").expect("failed to get all keys");
     let mut links: Vec<Link> = Vec::new();
 
     for id in ids {
         let url: String = conn.get(id.clone()).expect("failed to execute GET");
-        let duration: usize = conn.ttl(id.clone()).unwrap();
+        let duration: usize = conn.ttl(id.clone()).expect("failed to execute TTL");
 
         links.push(Link { id, url, duration });
     }
@@ -64,30 +64,50 @@ fn new(link: Json<Link>) -> Value {
     let id = nanoid!(5);
     let mut conn = connect();
 
-    let _: () = conn.set::<&str, &str, ()>(&id, &link.url).unwrap();
-    let _: () = conn.expire(&id, link.duration).unwrap();
+    let _: () = conn
+        .set::<String, String, ()>(id.clone(), link.url.clone())
+        .expect("failed to execute SET");
+    let _: () = conn
+        .expire(id.clone(), link.duration)
+        .expect("faile to execute EXPIRE");
 
-    serde_json::json!(LinkStatus { id: id, url: link.url.clone(), duration: link.duration })
+    serde_json::json!(LinkStatus {
+        id: id,
+        url: link.url.clone(),
+        duration: link.duration
+    })
 }
 
 #[put("/", format = "json", data = "<link>")]
 fn edit_url(link: Json<Link>) -> Value {
     let mut conn = connect();
-    
-    let _: () = conn.getset(link.id.clone(), link.url.clone()).unwrap();
-    let _: () = conn.expire(link.id.clone(), link.duration).unwrap();
 
-    serde_json::json!(LinkStatus { id: link.id.clone(), url: link.url.clone(), duration: link.duration })
+    let _: () = conn
+        .getset(link.id.clone(), link.url.clone())
+        .expect("faile to execute GETSET");
+    let _: () = conn
+        .expire(link.id.clone(), link.duration)
+        .expect("faile to execute EXPIRE");
+
+    serde_json::json!(LinkStatus {
+        id: link.id.clone(),
+        url: link.url.clone(),
+        duration: link.duration
+    })
 }
 
 #[delete("/", format = "json", data = "<link>")]
 fn delete_url(link: Json<Link>) -> Value {
     let mut conn = connect();
 
-    let url: String = conn.get(link.id.clone()).unwrap();
-    let _: () = conn.del(link.id.clone()).unwrap();
+    let url: String = conn.get(link.id.clone()).expect("failed to execute SET");
+    let _: () = conn.del(link.id.clone()).expect("failed to execute DEL");
 
-    serde_json::json!(LinkStatus { id: link.id.clone(), url: url, duration: link.duration })
+    serde_json::json!(LinkStatus {
+        id: link.id.clone(),
+        url: url,
+        duration: link.duration
+    })
 }
 
 #[launch]
