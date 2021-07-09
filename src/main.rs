@@ -42,8 +42,8 @@ fn index() -> Value {
     let mut links: Vec<Link> = Vec::new();
 
     for id in ids {
-        let url: String = conn.get(id.clone()).expect("failed to execute GET");
-        let duration: usize = conn.ttl(id.clone()).expect("failed to execute TTL");
+        let url: String = conn.get(&id).expect("failed to execute GET");
+        let duration: usize = conn.ttl(&id).expect("failed to execute TTL");
 
         links.push(Link { id, url, duration });
     }
@@ -52,7 +52,7 @@ fn index() -> Value {
 }
 
 #[get("/<id>")]
-fn redirect(id: String) -> Redirect {
+fn redirect(id: &str) -> Redirect {
     let mut conn = connect();
     let url_redirect: String = conn.get(id).expect("failed to execute GET");
 
@@ -65,10 +65,10 @@ fn new(link: Json<Link>) -> Value {
     let mut conn = connect();
 
     let _: () = conn
-        .set::<String, String, ()>(id.clone(), link.url.clone())
+        .set::<&str, &str, ()>(&id, &link.url)
         .expect("failed to execute SET");
     let _: () = conn
-        .expire(id.clone(), link.duration)
+        .expire(&id, link.duration)
         .expect("faile to execute EXPIRE");
 
     serde_json::json!(LinkStatus {
@@ -83,10 +83,10 @@ fn edit_url(link: Json<Link>) -> Value {
     let mut conn = connect();
 
     let _: () = conn
-        .getset(link.id.clone(), link.url.clone())
+        .getset(&link.id, &link.url)
         .expect("faile to execute GETSET");
     let _: () = conn
-        .expire(link.id.clone(), link.duration)
+        .expire(&link.id, link.duration)
         .expect("faile to execute EXPIRE");
 
     serde_json::json!(LinkStatus {
@@ -100,8 +100,8 @@ fn edit_url(link: Json<Link>) -> Value {
 fn delete_url(link: Json<Link>) -> Value {
     let mut conn = connect();
 
-    let url: String = conn.get(link.id.clone()).expect("failed to execute SET");
-    let _: () = conn.del(link.id.clone()).expect("failed to execute DEL");
+    let url: String = conn.get(&link.id).expect("failed to execute SET");
+    let _: () = conn.del(&link.id).expect("failed to execute DEL");
 
     serde_json::json!(LinkStatus {
         id: link.id.clone(),
