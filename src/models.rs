@@ -1,15 +1,14 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
-pub struct Link {
+#[derive(Serialize)]
+pub struct ShorterURL {
     pub id: String,
     pub url: String,
     pub duration: usize,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct LinkStatus {
-    pub id: String,
+#[derive(Deserialize)]
+pub struct NewShorterURL {
     pub url: String,
     pub duration: usize,
 }

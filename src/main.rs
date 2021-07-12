@@ -1,153 +1,66 @@
-#![feature(proc_macro_hygiene, decl_macro)]
-
-#[macro_use]
-extern crate rocket;
-extern crate redis;
-
+mod consts;
+mod db;
 mod models;
 
-use rocket::http::{ContentType, Status};
-use rocket::request::Request;
-use rocket::response::Redirect;
-use rocket::response::{self, Responder, Response};
-use rocket::serde::json::Json;
-
+use bb8_redis::redis::AsyncCommands;
+use db::RedisConnection;
+use models::{NewShorterURL, ShorterURL};
 use nanoid::nanoid;
-use redis::Commands;
-use serde_json::Value;
+use rocket::response::status::Created;
+use rocket::response::Redirect;
+use rocket::serde::json::Json;
+use rocket::{get, launch, post, routes, Responder};
 
-use models::{Link, LinkStatus};
-
-fn connect() -> redis::Connection {
-    redis::Client::open("redis://127.0.0.1:6379")
-        .expect("Invalid connection URL")
-        .get_connection()
-        .expect("failed to connect to Redis")
-}
-#[derive(Debug)]
-struct ApiResponse {
-    json: Value,
-    status: Status,
-}
-
-impl<'r, 'a> Responder<'r, 'r> for ApiResponse {
-    fn respond_to(self, req: &Request) -> response::Result<'r> {
-        Response::build_from(self.json.respond_to(&req).unwrap())
-            .status(self.status)
-            .header(ContentType::JSON)
-            .ok()
-    }
-}
+const REDIS_KEY_PREFIX: &str = "microshort::ids";
 
 #[get("/")]
-fn index() -> Value {
-    let mut conn = connect();
-    let ids: Vec<String> = conn.keys("*").expect("failed to get all keys");
-    let mut links: Vec<Link> = Vec::new();
+async fn index() -> &'static str {
+    "Hello, world!"
+}
 
-    for id in ids {
-        let url: String = conn.get(&id).expect("failed to execute GET");
-        let duration: usize = conn.ttl(&id).expect("failed to execute TTL");
+#[post("/", format = "json", data = "<data>")]
+async fn shorten(
+    data: Json<NewShorterURL>,
+    mut conn: RedisConnection<'_>,
+) -> Created<Json<ShorterURL>> {
+    let id = loop {
+        let id = nanoid!(4, &consts::ALPHANUMERIC);
+        let key = format!("{}::{}", REDIS_KEY_PREFIX, id);
+        let result = conn.set_nx(&key, &data.url).await.expect("RedisSetNXError");
 
-        links.push(Link { id, url, duration });
-    }
+        if result {
+            break id;
+        }
+    };
 
-    serde_json::json!(links)
+    let location = format!("/{}", &id);
+    Created::new(location).body(Json(ShorterURL {
+        id,
+        url: data.url.clone(),
+        duration: data.duration,
+    }))
+}
+
+#[derive(Responder)]
+enum AccessResponse {
+    Found(Redirect),
+    #[response(status = 404)]
+    NotFound(()),
 }
 
 #[get("/<id>")]
-fn redirect(id: &str) -> Redirect {
-    let mut conn = connect();
-    let url_redirect: String = conn.get(id).expect("failed to execute GET");
+async fn access(id: &str, mut conn: RedisConnection<'_>) -> AccessResponse {
+    let key = format!("{}::{}", REDIS_KEY_PREFIX, id);
 
-    Redirect::to(url_redirect)
-}
-
-#[post("/", format = "json", data = "<link>")]
-fn new(link: Json<Link>) -> ApiResponse {
-    let id = nanoid!(5);
-    let mut conn = connect();
-
-    let _: () = conn
-        .set::<&str, &str, ()>(&id, &link.url)
-        .expect("failed to execute SET");
-    let _: () = conn
-        .expire(&id, link.duration)
-        .expect("faile to execute EXPIRE");
-
-    ApiResponse {
-        json: serde_json::json!(LinkStatus {
-            id: id,
-            url: link.url.clone(),
-            duration: link.duration
-        }),
-        status: Status::Created,
-    }
-}
-
-#[put("/", format = "json", data = "<link>")]
-fn edit_url(link: Json<Link>) -> ApiResponse {
-    let mut conn = connect();
-
-    let exist: bool = conn.exists(&link.id).expect("faile to execute EXISTS");
-    if !exist {
-        return ApiResponse {
-            json: serde_json::json!(LinkStatus {
-                id: String::new(),
-                url: String::new(),
-                duration: 0
-            }),
-            status: Status::NotFound,
-        };
-    }
-
-    let _: () = conn
-        .getset(&link.id, &link.url)
-        .expect("faile to execute GETSET");
-    let _: () = conn
-        .expire(&link.id, link.duration)
-        .expect("faile to execute EXPIRE");
-
-    ApiResponse {
-        json: serde_json::json!(LinkStatus {
-            id: link.id.clone(),
-            url: link.url.clone(),
-            duration: link.duration
-        }),
-        status: Status::Accepted,
-    }
-}
-
-#[delete("/", format = "json", data = "<link>")]
-fn delete_url(link: Json<Link>) -> ApiResponse {
-    let mut conn = connect();
-
-    let exist: bool = conn.exists(&link.id).expect("faile to execute EXISTS");
-    if !exist {
-        return ApiResponse {
-            json: serde_json::json!(LinkStatus {
-                id: String::new(),
-                url: String::new(),
-                duration: 0
-            }),
-            status: Status::NotFound,
-        };
-    }
-
-    let url: String = conn.get(&link.id).expect("failed to execute SET");
-    let _: () = conn.del(&link.id).expect("failed to execute DEL");
-
-    ApiResponse {
-        json: serde_json::json!(LinkStatus {
-            id: link.id.clone(),
-            url: url,
-            duration: link.duration
-        }),
-        status: Status::Ok,
+    match conn.get::<String, String>(key).await {
+        Ok(url) => AccessResponse::Found(Redirect::to(url)),
+        Err(_) => AccessResponse::NotFound(()),
     }
 }
 
 #[launch]
-fn rocket() -> _ {
-    rocket::build().mount("/", routes![index, new, redirect, edit_url, delete_url])
+async fn rocket() -> _ {
+    rocket::build()
+        .manage(db::pool().await)
+        .mount("/", routes![index, access, shorten])
 }

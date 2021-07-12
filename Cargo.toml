@@ -4,17 +4,19 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-rand = "*"
-rand_derive = "*"
-serde_json = "*"
-nanoid = "*"
-redis = "*"
-dotenv = "*"
+nanoid = "0.4.0"
+url = "2.2.2"
+bb8 = "0.7.0"
+bb8-redis = "0.9.0"
+
+[dependencies.redis]
+version = "0.20.2"
+features = ["tokio-comp"]
 
 [dependencies.rocket]
 version = "0.5.0-rc.1"
 features = ["json"]
 
 [dependencies.serde]
-version = "*"
+version = "1.0.126"
 features = ["derive"]
