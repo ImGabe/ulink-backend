@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use rocket::serde::{Deserialize, Serialize};
 
 #[derive(Serialize)]
 pub struct ShorterURL {
