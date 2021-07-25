@@ -11,7 +11,7 @@
     in rec {
       # `nix build`
       packages.my-project = naersk-lib.buildPackage {
-        pname = "my-project";
+        pname = "ulink";
         root = ./.;
       };
       defaultPackage = packages.my-project;
@@ -24,7 +24,7 @@
 
       # `nix develop`
       devShell = pkgs.mkShell {
-        nativeBuildInputs = with pkgs; [ rustc cargo rust-analyzer ];
+        nativeBuildInputs = with pkgs; [ rustc cargo clippy rust-analyzer docker-compose ];
       };
     });
 }

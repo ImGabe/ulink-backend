@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::{ops::{Deref, DerefMut}};
 
 use bb8_redis::RedisConnectionManager;
 use rocket::{
