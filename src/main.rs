@@ -4,7 +4,8 @@ mod consts;
 mod db;
 mod models;
 
-#[cfg(test)] mod test;
+#[cfg(test)]
+mod test;
 
 use bb8_redis::redis::AsyncCommands;
 use db::RedisConnection;
