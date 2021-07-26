@@ -17,4 +17,7 @@ jobs:
         with:
           toolchain: stable
       - run: cargo test
+        env:
+          ORIGIN_ADDRESS: ${{ secrets.ORIGIN_ADDRESS }}
+
       - run: cargo build --release --all-features
