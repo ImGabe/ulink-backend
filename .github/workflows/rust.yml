@@ -5,9 +5,7 @@ name: rust-cargo
 jobs:
   build_and_test:
     name: Rust project
-
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - uses: isbang/compose-action@v1.0.0
@@ -18,13 +16,5 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --verbose
+      - run: cargo test
+      - run: cargo build --release --all-features
