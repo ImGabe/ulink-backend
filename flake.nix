@@ -24,7 +24,7 @@
 
       # `nix develop`
       devShell = pkgs.mkShell {
-        nativeBuildInputs = with pkgs; [ rustc cargo clippy rust-analyzer docker-compose ];
+        nativeBuildInputs = with pkgs; [ rustc cargo clippy rustfmt rust-analyzer docker-compose ];
       };
     });
 }
