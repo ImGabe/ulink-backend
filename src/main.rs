@@ -85,10 +85,7 @@ impl Fairing for Cors {
     }
 
     async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
-        let origin = match env::var("ORIGIN_ADDRESS") {
-            Ok(val) => val,
-            Err(e) => panic!("{}", e),
-        };
+        let origin = env::var("ORIGIN_ADDRESS").expect("No ORIGIN_ADDRESS found");
 
         if req.method() == Method::Options || res.content_type() == Some(ContentType::JSON) {
             res.set_header(Header::new("Access-Control-Allow-Origin", origin));
@@ -110,8 +107,10 @@ impl Fairing for Cors {
 async fn rocket() -> _ {
     dotenv().ok();
 
+    let redis_url = std::env::var("REDIS_URL").expect("NoRedisURL");
+
     rocket::build()
         .attach(Cors)
-        .manage(db::pool().await)
+        .manage(db::pool(&redis_url).await)
         .mount("/", routes![index, access, shorten, cors])
 }

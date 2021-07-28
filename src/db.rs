@@ -8,12 +8,10 @@ use rocket::{
     State,
 };
 
-const REDIS_URL: &str = "redis://redis:6379";
-
 type Pool = bb8::Pool<RedisConnectionManager>;
 
-pub async fn pool() -> Pool {
-    let manager = RedisConnectionManager::new(REDIS_URL).unwrap();
+pub async fn pool(redis_url: &str) -> Pool {
+    let manager = RedisConnectionManager::new(redis_url).unwrap();
     Pool::builder().build(manager).await.expect("RedisPoolFail")
 }
 
