@@ -7,6 +7,12 @@ pub struct ShorterURL {
     pub duration: usize,
 }
 
+impl ShorterURL {
+    pub fn new(id: String, url: String, duration: usize) -> Self {
+        Self { id, url, duration }
+    }
+}
+
 #[derive(Deserialize)]
 pub struct NewShorterURL {
     pub url: String,

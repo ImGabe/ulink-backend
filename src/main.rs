@@ -53,11 +53,7 @@ async fn shorten(
     };
 
     let location = format!("/{}", &id);
-    Created::new(location).body(Json(ShorterURL {
-        id,
-        url: data.url.clone(),
-        duration: data.duration,
-    }))
+    Created::new(location).body(Json(ShorterURL::new(id, data.url.clone(), data.duration)))
 }
 
 #[derive(Responder)]
