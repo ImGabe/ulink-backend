@@ -1,13 +1,25 @@
-on: [push]
+name: Rust
 
-name: rust-cargo
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  build_and_test:
-    name: Rust project
+  build:
+
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v2
-      - uses: isbang/compose-action@v1.0.0
-        with:
-          compose-file: 'docker-compose.yml'
+    - uses: actions/checkout@v2
+    - name: Build
+      run: cargo build --verbose
+  
+    - uses: actions/download-artifact@v2
+      with:
+        name: ulink
+        path: ./target/release/ulink
