@@ -17,17 +17,17 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build
-      run: cargo build --verbose
+      run: cargo build --release --verbose
     
     - name: Display structure of downloaded files
       run: ls -R
 
-    # - uses: actions/upload-artifact@v2
-    #   with:
-    #     name: ulink
-    #     path: /target/release/ulink
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ulink
+        path: /target/release/ulink
   
-    # - uses: actions/download-artifact@v2
-    #   with:
-    #     name: ulink
-    #     path: /target/release/ulink
+    - uses: actions/download-artifact@v2
+      with:
+        name: ulink
+        path: /target/release/ulink
