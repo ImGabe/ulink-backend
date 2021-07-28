@@ -8,7 +8,7 @@ use rocket::{
     State,
 };
 
-const REDIS_URL: &str = "redis://0.0.0.0:6379";
+const REDIS_URL: &str = "redis://redis:6379";
 
 type Pool = bb8::Pool<RedisConnectionManager>;
 
