@@ -14,12 +14,15 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    steps:
-    - uses: actions/checkout@v2
-    - name: Build
-      run: cargo build --verbose
+    # steps:
+    # - uses: actions/checkout@v2
+    # - name: Build
+    #   run: cargo build --verbose
   
-    - uses: actions/download-artifact@v2
-      with:
-        name: ulink
-        path: /home/runner/work/ulink-backend/ulink-backend/target/release/
+    # - uses: actions/download-artifact@v2
+    #   with:
+    #     name: ulink
+    #     path: .target/release/
+
+    - name: Display structure of downloaded files
+      run: ls -R
