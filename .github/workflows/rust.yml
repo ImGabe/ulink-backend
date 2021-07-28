@@ -19,15 +19,10 @@ jobs:
     - name: Build
       run: cargo build --release --verbose
     
-    - name: Display structure of downloaded files
-      run: ls -R
+    - name: strip file
+      run: strip ./target/release/ulink
 
     - uses: actions/upload-artifact@v2
-      with:
-        name: ulink
-        path: ./target/release/ulink
-  
-    - uses: actions/download-artifact@v2
       with:
         name: ulink
         path: ./target/release/ulink
