@@ -11,13 +11,3 @@ jobs:
       - uses: isbang/compose-action@v1.0.0
         with:
           compose-file: 'docker-compose.yml'
-
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - run: cargo test
-        env:
-          ORIGIN_ADDRESS: ${{ secrets.ORIGIN_ADDRESS }}
-
-      - run: cargo build --release --all-features
