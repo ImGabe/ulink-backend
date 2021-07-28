@@ -18,11 +18,16 @@ jobs:
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --verbose
+    
+    - name: Display structure of downloaded files
+      run: ls -R | grep "ulink"
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: ulink
+        path: /target/release/ulink
   
     - uses: actions/download-artifact@v2
       with:
         name: ulink
-        path: .target/release/
-
-    - name: Display structure of downloaded files
-      run: ls -R
+        path: /target/release/ulink
