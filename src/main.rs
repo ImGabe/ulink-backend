@@ -12,11 +12,15 @@ use db::RedisConnection;
 use dotenv::dotenv;
 use models::{NewShorterURL, ShorterURL};
 use nanoid::nanoid;
-use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::Header;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
-use rocket::{get, launch, options, post, routes, Request, Responder, Response};
+use rocket::{catch, get, launch, options, post, routes, Request, Responder, Response};
+use rocket::{
+    catchers,
+    fairing::{Fairing, Info, Kind},
+    http::Status,
+};
 use rocket::{
     http::{ContentType, Method},
     response::status::Created,
@@ -43,10 +47,6 @@ async fn shorten(
         let key = format!("{}::{}", REDIS_KEY_PREFIX, id);
         let result = conn.set_nx(&key, &data.url).await.expect("RedisSetNXError");
 
-        conn.expire::<&str, usize>(&key, data.duration)
-            .await
-            .expect("RedisExpireError");
-
         if result {
             break id;
         }
@@ -71,8 +71,7 @@ async fn shorten(
 #[derive(Responder)]
 enum AccessResponse {
     Found(Redirect),
-    #[response(status = 404)]
-    NotFound(()),
+    NotFound(Redirect),
 }
 
 #[get("/<id>")]
@@ -81,7 +80,7 @@ async fn access(id: &str, mut conn: RedisConnection<'_>) -> AccessResponse {
 
     match conn.get::<String, String>(key).await {
         Ok(url) => AccessResponse::Found(Redirect::to(url)),
-        Err(_) => AccessResponse::NotFound(()),
+        Err(_) => AccessResponse::NotFound(Redirect::to("https://imgabe.github.io/ulink/")),
     }
 }
 
@@ -115,6 +114,21 @@ impl Fairing for Cors {
     }
 }
 
+#[catch(500)]
+fn internal_error() -> &'static str {
+    "Whoops! Looks like we messed up."
+}
+
+#[catch(404)]
+fn not_found(req: &Request) -> String {
+    format!("I couldn't find '{}'. Try something else?", req.uri())
+}
+
+#[catch(default)]
+fn default(status: Status, req: &Request) -> String {
+    format!("{} ({})", status, req.uri())
+}
+
 #[launch]
 async fn rocket() -> _ {
     dotenv().ok();
@@ -125,4 +139,5 @@ async fn rocket() -> _ {
         .attach(Cors)
         .manage(db::pool(&redis_url).await)
         .mount("/", routes![index, access, shorten, cors])
+        .register("/", catchers![internal_error, not_found, default])
 }
