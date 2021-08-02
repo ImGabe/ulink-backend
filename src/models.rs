@@ -4,11 +4,11 @@ use rocket::serde::{Deserialize, Serialize};
 pub struct ShorterURL {
     pub id: String,
     pub url: String,
-    pub duration: usize,
+    pub duration: Option<usize>,
 }
 
 impl ShorterURL {
-    pub fn new(id: String, url: String, duration: usize) -> Self {
+    pub fn new(id: String, url: String, duration: Option<usize>) -> Self {
         Self { id, url, duration }
     }
 }
@@ -16,5 +16,5 @@ impl ShorterURL {
 #[derive(Deserialize)]
 pub struct NewShorterURL {
     pub url: String,
-    pub duration: usize,
+    pub duration: Option<usize>,
 }

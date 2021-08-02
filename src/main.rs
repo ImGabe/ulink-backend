@@ -53,6 +53,18 @@ async fn shorten(
     };
 
     let location = format!("/{}", &id);
+
+    if data.duration.is_none() {
+        return Created::new(location).body(Json(ShorterURL::new(id, data.url.clone(), None)));
+    }
+
+    conn.expire::<&str, usize>(
+        &format!("{}::{}", REDIS_KEY_PREFIX, id),
+        data.duration.expect("Faild Duration"),
+    )
+    .await
+    .expect("RedisExpireError");
+
     Created::new(location).body(Json(ShorterURL::new(id, data.url.clone(), data.duration)))
 }
 
