@@ -12,20 +12,11 @@ use db::RedisConnection;
 use dotenv::dotenv;
 use models::{NewShorterURL, ShorterURL};
 use nanoid::nanoid;
-use rocket::http::Header;
+use rocket::response::status::Created;
 use rocket::response::Redirect;
 use rocket::serde::json::Json;
-use rocket::{catch, get, launch, options, post, routes, Request, Responder, Response};
-use rocket::{
-    catchers,
-    fairing::{Fairing, Info, Kind},
-    http::Status,
-};
-use rocket::{
-    http::{ContentType, Method},
-    response::status::Created,
-};
-use std::env;
+use rocket::{catch, get, launch, post, routes, Responder, Request};
+use rocket::{catchers, http::Status};
 
 const REDIS_KEY_PREFIX: &str = "microshort::ids";
 
@@ -33,9 +24,6 @@ const REDIS_KEY_PREFIX: &str = "microshort::ids";
 async fn index() -> &'static str {
     "Hello, world!"
 }
-
-#[options("/")]
-async fn cors() {}
 
 #[post("/", format = "json", data = "<data>")]
 async fn shorten(
@@ -84,36 +72,6 @@ async fn access(id: &str, mut conn: RedisConnection<'_>) -> AccessResponse {
     }
 }
 
-struct Cors;
-
-#[rocket::async_trait]
-impl Fairing for Cors {
-    fn info(&self) -> Info {
-        Info {
-            name: "My Custom Fairing",
-            kind: Kind::Response,
-        }
-    }
-
-    async fn on_response<'r>(&self, req: &'r Request<'_>, res: &mut Response<'r>) {
-        let origin = env::var("ORIGIN_ADDRESS").expect("No ORIGIN_ADDRESS found");
-
-        if req.method() == Method::Options || res.content_type() == Some(ContentType::JSON) {
-            res.set_header(Header::new("Access-Control-Allow-Origin", origin));
-            res.set_header(Header::new(
-                "Access-Control-Allow-Methods",
-                "POST, GET, OPTIONS",
-            ));
-            res.set_header(Header::new("Access-Control-Allow-Headers", "Content-Type"));
-            res.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
-        }
-
-        if req.method() == Method::Options {
-            res.set_header(ContentType::Plain);
-        }
-    }
-}
-
 #[catch(500)]
 fn internal_error() -> &'static str {
     "Whoops! Looks like we messed up."
@@ -136,8 +94,7 @@ async fn rocket() -> _ {
     let redis_url = std::env::var("REDIS_URL").expect("NoRedisURL");
 
     rocket::build()
-        .attach(Cors)
         .manage(db::pool(&redis_url).await)
-        .mount("/", routes![index, access, shorten, cors])
+        .mount("/", routes![index, access, shorten])
         .register("/", catchers![internal_error, not_found, default])
 }
