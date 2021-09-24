@@ -2,4 +2,4 @@
 address = "0.0.0.0"
 
 [debug]
-port = 8080
+port = 8000
