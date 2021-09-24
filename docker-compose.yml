@@ -1,4 +1,4 @@
-version: "3.9"
+version: "3"
 
 services:
   redis:
@@ -16,7 +16,7 @@ services:
     networks:
       - backend
     environment:
-      - ORIGIN_ADDRESS=http://localhost:3000
+      - REDIS_URL=redis://redis:6379
 
 networks:
   backend:
