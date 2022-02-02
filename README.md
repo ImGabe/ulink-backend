@@ -71,4 +71,4 @@ Alternatively, see the GitHub documentation on [how to create a pull request](ht
 [issues-url]: https://github.com/ImGabe/ulink-backend/issues
 
 [license-shield]: https://img.shields.io/github/license/ImGabe/ulink-backend
-[license-url]: https://github.com/ImGabe/ulink-backend/blob/master/LICENSE.md
+[license-url]: https://github.com/ImGabe/ulink-backend/blob/master/LICENSE
